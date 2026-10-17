@@ -6,7 +6,6 @@ A free, searchable library of 7,323 AI skills gathered from 83 public open-sourc
 
 - `index.html` — the library app (search, pack/source/license filters, full SKILL.md reader, copy/download, favorites). Static, no build step.
 - `data/` — `catalog.js` (the full index) + per-pack `bodies-*.js` (skill texts, loaded on demand).
-- `ATTRIBUTIONS.md` — every source project and its license basis.
-- `manifest.csv` — the complete skill index (name, pack, source, license).
+- Every skill card and reader view shows its source project and license; full license texts and attributions ship with the downloadable edition.
 
 Part of the Common Sense AI School (commons3nse.com) — free forever. The downloadable edition (full skill folders with scripts and assets) is available via the Common Sense Gumroad store.

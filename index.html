@@ -99,6 +99,13 @@
   .loading{color:var(--dim);padding:30px 0}
   footer{padding:16px 22px;border-top:1px solid var(--line);color:var(--dim);font-size:12.5px}
   @media (max-width:760px){ aside{display:none} }
+.gate{border:1px solid var(--line);background:var(--panel2);border-radius:12px;padding:20px;margin-top:16px}
+  .gate h3{font-family:Fraunces,Georgia,serif;margin:0 0 6px;font-size:20px;color:var(--text)}
+  .gate p{color:var(--dim);font-size:14px;line-height:1.55;margin:0 0 12px}
+  .gate input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:11px 13px;font-size:14.5px;margin-bottom:9px;outline:none}
+  .gate input:focus{border-color:var(--acc)}
+  .gate .msg{color:var(--acc2);font-size:13px;margin-top:9px;min-height:16px}
+  .fadeout{color:var(--faint);font-size:13px;margin-top:10px}
 </style>
 </head>
 <body>
@@ -116,7 +123,7 @@
     <a class="cta-ghost" href="https://opportunitychris.gumroad.com" target="_blank" rel="noopener">Get the downloadable edition</a>
     <a class="cta-ghost" href="https://commons3nse.com" target="_blank" rel="noopener">Common Sense AI School — free</a>
   </div>
-  <p class="how"><b>How this library was built:</b> we collected skills from 83 public open-source projects (Anthropic, Microsoft, Google, GitHub, Shopify, and independent builders), read every project's license before including a single file, dropped the duplicates, and sorted the rest into 15 packs. Every skill below names its source and its license — the full attribution list is <a href="ATTRIBUTIONS.md">here</a>, and the complete index is <a href="manifest.csv">here</a>. If a license didn't allow sharing, the skill isn't in this library.</p>
+  <p class="how"><b>How this library was built:</b> we collected skills from 83 public open-source projects (Anthropic, Microsoft, Google, GitHub, Shopify, and independent builders), read every project's license before including a single file, dropped the duplicates, and sorted the rest into 15 packs. Every skill below names its source and its license — and the full license texts and attributions ship with the downloadable edition. If a license didn't allow sharing, the skill isn't in this library.</p>
 </section>
 <a id="library"></a>
 <div class="layout">
@@ -127,6 +134,8 @@
     <select id="srcFilter"><option value="">All sources</option></select>
     <h3>License</h3>
     <select id="licFilter"><option value="">All licenses</option></select>
+    <h3>Sort</h3>
+    <select id="sortSel"><option value="">Relevance</option><option value="name">Name A–Z</option><option value="name-desc">Name Z–A</option><option value="pack">Pack</option><option value="source">Source</option></select>
     <h3>View</h3>
     <button class="pack" id="favToggle">★ Favorites <span class="n" id="favCount">0</span></button>
   </aside>
@@ -138,8 +147,7 @@
 </div>
 <footer>
   The Common Sense Skills Library is part of the <a href="https://commons3nse.com" target="_blank" rel="noopener">Common Sense AI School</a> — free forever, a Common Sense LLC project.
-  Every skill is listed with its source project and license; full license texts and attributions are in the downloadable edition and the
-  <a href="ATTRIBUTIONS.md">attribution list</a>. Want the whole library on your own machine, folders and all?
+  Every skill is listed with its source project and license; full license texts and attributions ship in the downloadable edition. Want the whole library on your own machine, folders and all?
   <a href="https://opportunitychris.gumroad.com" target="_blank" rel="noopener">Get the downloadable edition</a>.
 </footer>
 <div id="overlay"><div id="sheet">
@@ -148,7 +156,6 @@
   <div class="meta" id="dMeta"></div>
   <div class="actions">
     <button class="btn" id="dCopy">Copy SKILL.md</button>
-    <button class="btn ghost" id="dDownload">Download SKILL.md</button>
     <button class="btn gold" id="dFav">★ Favorite</button>
   </div>
   <div class="md" id="dBody"><div class="loading">Loading skill…</div></div>
@@ -162,7 +169,7 @@ const PACK_LABELS = {
   "10-writing":"Writing & Docs","11-finance":"Finance & Trading","12-security":"Security & Compliance",
   "13-productivity":"Productivity & Personal","14-construction":"Construction & Trades","15-legal":"Legal"
 };
-const S = { pack:"", src:"", lic:"", q:"", favsOnly:false, shown:120,
+const S = { pack:"", src:"", lic:"", q:"", favsOnly:false, shown:120, sort:"",
   favs:new Set(JSON.parse(localStorage.getItem("sl_favs")||"[]")) };
 const $ = id => document.getElementById(id);
 const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -182,6 +189,7 @@ for (const s of Object.keys(srcCounts).sort()) $("srcFilter").insertAdjacentHTML
 for (const l of Object.keys(licCounts).sort()) $("licFilter").insertAdjacentHTML("beforeend", `<option>${esc(l)}</option>`);
 $("srcFilter").onchange = e => { S.src = e.target.value.replace(/ \(\d+\)$/,""); S.shown = 120; render(); };
 $("licFilter").onchange = e => { S.lic = e.target.value; S.shown = 120; render(); };
+$("sortSel").onchange = e => { S.sort = e.target.value; S.shown = 120; render(); };
 $("favToggle").onclick = () => { S.favsOnly = !S.favsOnly; $("favToggle").classList.toggle("on", S.favsOnly); S.shown = 120; render(); };
 $("search").addEventListener("input", e => { S.q = e.target.value.trim().toLowerCase(); S.shown = 120; render(); });
 
@@ -205,6 +213,10 @@ function filtered(){
     const score = r => toks.reduce((a,t) => a + (r[0].toLowerCase().includes(t) ? 2 : 0) + (r[1].toLowerCase().includes(t) ? 1 : 0), 0);
     rows = rows.sort((a,b) => score(b) - score(a));
   }
+  if (S.sort==="name") rows.sort((a,b)=>a[0].localeCompare(b[0]));
+  else if (S.sort==="name-desc") rows.sort((a,b)=>b[0].localeCompare(a[0]));
+  else if (S.sort==="pack") rows.sort((a,b)=>a[2].localeCompare(b[2])||a[0].localeCompare(b[0]));
+  else if (S.sort==="source") rows.sort((a,b)=>a[3].localeCompare(b[3])||a[0].localeCompare(b[0]));
   return rows;
 }
 function saveFavs(){ localStorage.setItem("sl_favs", JSON.stringify([...S.favs])); $("favCount").textContent = S.favs.size; }
@@ -259,7 +271,22 @@ async function openSkill(pack, folder){
   await loadBodies(pack);
   const text = (window.BODIES && window.BODIES[pack] && window.BODIES[pack][folder]) || "(SKILL.md text not found in demo data.)";
   current.text = text;
-  $("dBody").innerHTML = md(text);
+  if (localStorage.getItem("cs_gate") === "1"){
+    $("dCopy").style.display = "";
+    $("dBody").innerHTML = md(text);
+  } else {
+    $("dCopy").style.display = "none";
+    const cut = text.lastIndexOf("\n", 900);
+    const preview = text.slice(0, cut > 200 ? cut : 900);
+    $("dBody").innerHTML = md(preview) +
+      '<p class="fadeout">— preview ends here —</p>' +
+      '<div class="gate"><h3>Get this skill in full — free</h3>' +
+      '<p>Drop your name and email and the full text unlocks right here, for every skill in the library. We\'ll also send you new skills as the library grows. No spam, ever.</p>' +
+      '<input id="gateName" type="text" placeholder="Your name" autocomplete="name">' +
+      '<input id="gateMail" type="email" placeholder="Email address" autocomplete="email">' +
+      '<button class="btn" onclick="submitGate()">Unlock the full skill</button>' +
+      '<div class="msg" id="gateMsg"></div></div>';
+  }
 }
 $("closeX").onclick = () => $("overlay").classList.remove("open");
 $("overlay").addEventListener("click", e => { if (e.target.id === "overlay") $("overlay").classList.remove("open"); });
@@ -270,13 +297,19 @@ $("dCopy").onclick = async () => {
   catch { $("dCopy").textContent = "Copy failed — select & copy manually"; }
   setTimeout(() => $("dCopy").textContent = "Copy SKILL.md", 1600);
 };
-$("dDownload").onclick = () => {
-  if (!current || !current.text) return;
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([current.text], { type: "text/markdown" }));
-  a.download = current.folder + "-SKILL.md"; a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-};
+const GATE = { url:"https://docs.google.com/forms/d/e/1FAIpQLSdekQLRtRUoy-uIUAYAiGRnjyrRLWs47OdjMD9Fub963hHqrQ/formResponse",
+  eName:"entry.1618501774", eMail:"entry.293620607", eSkill:"entry.1540371821" };
+function submitGate(){
+  const n = ($("gateName").value || "").trim();
+  const m = ($("gateMail").value || "").trim();
+  if (!n || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)){ $("gateMsg").textContent = "Please add your name and a valid email to unlock."; return; }
+  const fd = new FormData();
+  fd.append(GATE.eName, n); fd.append(GATE.eMail, m);
+  fd.append(GATE.eSkill, current ? (current.row[2] + "/" + current.row[0]) : "");
+  fetch(GATE.url, { method:"POST", mode:"no-cors", body:fd }).catch(()=>{});
+  localStorage.setItem("cs_gate","1"); localStorage.setItem("cs_gate_name", n);
+  if (current) openSkill(current.pack, current.folder);
+}
 $("dFav").onclick = () => {
   if (!current) return;
   const k = current.pack + "/" + current.folder;
